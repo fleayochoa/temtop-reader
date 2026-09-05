@@ -27,7 +27,7 @@ import serial
 # Configuration - adjust to match your setup
 # ----------------------------------------------------------------------
 SERIAL_PORT = '/dev/ttyUSB0'  # e.g. "COM3" on Windows, "/dev/ttyUSB0" on Linux/Mac
-BAUDRATE = 9600             # device default per manual; unit also supports
+BAUDRATE = 115200             # device default per manual; unit also supports
                             # 19200 / 115200 -> check Menu > System Setting > COM
                             # Setting on the device and match it here.
 SERIAL_TIMEOUT = 2.0        # seconds to wait for a reply
