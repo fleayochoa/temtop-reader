@@ -14,6 +14,7 @@ then Lo register, i.e. standard Modbus word order).
 Requires: pip install pyserial
 """
 
+import argparse
 import csv
 import os
 import struct
@@ -38,6 +39,8 @@ START_ADDRESS = 0x0003
 REGISTER_COUNT = 0x000E     # 14 registers = 7 channels x 2 registers (32-bit) each
 
 SAMPLE_INTERVAL_S = 60      # seconds between readings
+
+DEFAULT_RUN_MINUTES = 60    # default duration of the logging session
 
 CSV_PATH = "pmd331_log.csv"
 
@@ -106,7 +109,19 @@ def append_to_csv(timestamp: str, counts: list):
         writer.writerow([timestamp] + counts)
 
 
-def main():
+def parse_args():
+    parser = argparse.ArgumentParser(description="Temtop PMD 331 particle counter logger.")
+    parser.add_argument(
+        "-m", "--minutes",
+        type=float,
+        default=DEFAULT_RUN_MINUTES,
+        help=f"how many minutes to run for (default: {DEFAULT_RUN_MINUTES})",
+    )
+    return parser.parse_args()
+
+
+def main(run_minutes: float):
+    run_seconds = run_minutes * 60
     print(f"Opening {SERIAL_PORT} @ {BAUDRATE} baud (8N1) ...")
     with serial.Serial(
         port=SERIAL_PORT,
@@ -116,10 +131,11 @@ def main():
         stopbits=serial.STOPBITS_ONE,
         timeout=SERIAL_TIMEOUT,
     ) as ser:
-        print(f"Logging every {SAMPLE_INTERVAL_S}s to {CSV_PATH}. Press Ctrl+C to stop.")
+        print(f"Logging every {SAMPLE_INTERVAL_S}s to {CSV_PATH} for {run_minutes:g} minutes. Press Ctrl+C to stop.")
         request = build_read_request()
+        run_start = time.monotonic()
 
-        while True:
+        while time.monotonic() - run_start < run_seconds:
             cycle_start = time.monotonic()
             timestamp = datetime.now().isoformat(timespec="seconds")
 
@@ -142,10 +158,13 @@ def main():
             elapsed = time.monotonic() - cycle_start
             time.sleep(max(0.0, SAMPLE_INTERVAL_S - elapsed))
 
+        print(f"Finished after {run_minutes:g} minutes.")
+
 
 if __name__ == "__main__":
+    args = parse_args()
     try:
-        main()
+        main(args.minutes)
     except KeyboardInterrupt:
         print("\nStopped by user.")
         sys.exit(0)
